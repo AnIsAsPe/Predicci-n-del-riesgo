@@ -1,13 +1,10 @@
 # Predicción del riesgo: un estudio comparado entre ARIMA y (ARIMA+ARCH)
 
-La volatilidad de los
-mercados es sin lugar a dudas una herramienta fundamental
-para mejorar la calidad de nuestras predicciones.
+El conjunto de datos fue obtenido de [S&P 500 stock data](https://www.kaggle.com/camnugent/sandp500) y consta de 619,040 observaciones diarias de precios durante cinco años (2013-2018) para 506 empresas.
 
-Presentamos un analisis de riesgo dada la volatilidad de los datos de las acciones históricas de 5 años de Citigroup Inc, 
-empresa pertenencienta al S&P 500, utilizando los modelos ARIMA, GARCH y una combinación de ambos.
+El estudio presentado se centra en el analisis de riesgo dada de los retornos de la empresa Citigroup Inc  utilizando los modelos ARIMA, GARCH y una combinación de ambos. Para ello se realiza una transformación logaritmica, para después estacionalizar la serie de tiempo a partir de las 1264 mediciones del cierre diario. 
 
-El conjunto de datos fue obtenido de [S&P 500 stock data](https://www.kaggle.com/camnugent/sandp500)
-
+Para la selección de los modelos se hace uso de la metodología Box-Jenkins, así como la comparación del Criterio de Información Akaike (AIC) y Log-Likelihood
+Se utilizan métodos visuales y test estadísticos para probar la estacionalidad de la serie, la elección de los modelos y la distribución de los residuos.
 
 
