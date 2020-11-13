@@ -121,12 +121,12 @@ ARIMA012 = arima(log.citygr, order=c(0,1,2))
 
 #5.Exploración de los residuos del modelo MA2 para el retorno===================
 
-res_MA2 =MA2$residuals
+res_MA2 = MA2$residuals
 
 #5.1 Exploración visual --------------------------------------------------------
 
 ggtsdisplay(res_MA2, 
-            plot.type = 'partial') #se puede escoger histograma
+            plot.type = 'histogram') #se puede escoger histograma
                                    #o pacf en la última gráfica
 
 #5.2 Test Ljung-Box --------------------------------------------------
@@ -167,34 +167,10 @@ summary(garch11)
   #los p-value del test Box Ljung son mayores a 0.05 tanto para residuos como
   #para residuos al cuadrado.
 
-#usando la librería rugarch
-
-spec = ugarchspec(variance.model = list(model='sGARCH', garchOrder=c(1,1)),
-                  mean.model = list(armaOrder = c(0,0)), 
-                  distribution.model ="sged") 
-model.fit <- ugarchfit(spec, data = retornos)
-
-model.fit@fit$matcoef
-print(model.fit)
-
-#Visualización de la volatilidad
 
 
-plot(model.fit@fit$sigma,main='volatilidad condicional', type='l')
 
-#Intervalos de confianza a partir de la votalidad
-qnorm(0.025)
-qdist('sged',p=0.025)
 
-fit012=fitted.values(ARIMA012)  #Serie de precios
-low=fit012[2:1259]-qdist('sged',p=0.25)*(model.fit@fit$sigma)
-high=fit012[2:1259]+qdist('sged',p=0.25)*(model.fit@fit$sigma)
-autoplot(fit012)
-
-autoplot(log.citygr[2:1259]) +
-  labs(title="Log Citygroup, Low, High") +
-  geom_line(y = low , color = 'red') +
-  geom_line(y = high, color='steelblue')
 
 
 #6.2 Value at Risk -------------------------------------------------
@@ -211,19 +187,81 @@ qplot(retornos , geom = 'histogram', bins=100) +
 
 #¿La serie retornos sigue una distribución normal?
 basicStats(retornos)    #fBasics
-qplot(retornos , geom = 'histogram')
+qplot(retornos , geom = 'histogram', bins=100)
 jarque.bera.test(retornos) # ho: es una distribución normal
+
+#volatilidad condicional
+sigma = volatility(garch11, type = "sigma") # en rugarch model$fit$fit$sigma 
+
+plot(sigma,  main='volatilidad condicional', type='l')
 
 
 # La distribución no es normal
 
-qplot(y = retornos , x = 1:1258 , geom = 'line') + geom_line(color="gray")+
-  geom_line(aes(y = model.fit@fit$sigma*qdist('sged',p=0.05) , x = 1:1258) , colour = 'red') +
+library(TSstudio)
+xts_to_ts(retornos)
+
+qplot(y=retornos, x= 1:1258, geom='line') + geom_line(color="gray")+
+  geom_line(aes(y = sigma*qdist('sged',p=0.05) , x = 1:1258) , colour = 'red') +
   geom_hline(yintercept = sd(retornos)*qnorm(0.05) , colour = 'springgreen', size=1)  + 
-  geom_hline(yintercept = sd(retornos)*qdist('sged',p=0.05) , colour = 'coral2', size=1)
-  labs(x = '' , y = 'Retorno diario' , title = 'Comparasión Value-at-Risk')
+  geom_hline(yintercept = sd(retornos)*qdist('sged',p=0.05) , colour = 'coral2', size=1) +
+  labs(x = '' , y = 'Retorno diario' , title = 'Comparación Value-at-Risk')
 
   
 
+  
+  #Intervalos de confianza a partir de la votalidad
+  qnorm(0.025)
+  qdist('sged',p=0.025)
+  
+  #Serie de precios con transformación logaritmica
+  fit012  =fitted.values(ARIMA012)  
+  low=fit012[2:1259]-qdist('sged',p=0.25)*(sigma)
+  high=fit012[2:1259]+qdist('sged',p=0.25)*(sigma)
+  autoplot(fit012)
+  
+  autoplot(log.citygr[2:1259]) +
+    labs(title="Log Citygroup, Low, High") +
+    geom_line(y = low , color = 'red') +
+    geom_line(y = high, color='steelblue')
+  
+  #Serie de precios:
+  precios= exp(fit012)
+  low = precios[2:1259] - exp(qdist('sged',p=0.25)*(sigma))
+  high= precios[2:1259]+ exp(qdist('sged',p=0.25)*(sigma))
 
 
+  autoplot(citygr[2:1259]) +
+    labs(title="Citygroup, Low, High") +
+    geom_line(y = low , color = 'red') +
+    geom_line(y = high, color='steelblue')
+  
+  ## Predicción
+  #predicción del modelo arima
+  
+  media_retorno = forecast(MA2,h=100, level=c(99.5))
+  plot(media_retorno)
+
+  
+  media_precios = forecast(ARIMA012, h=100, level=c(99.5))
+  plot(media_precios)
+  
+  
+  #predicción usando la librería rugarch
+  
+  spec = ugarchspec(variance.model = list(model='sGARCH', garchOrder=c(1,1)),
+                    mean.model = list(armaOrder = c(0,2)), 
+                    distribution.model ="norm") 
+  model.fit <- ugarchfit(spec, data = retornos, out.sample=10)
+
+  prediccion = ugarchforecast(model.fit, n.ahed=10,  n.roll=10)
+  
+  plot(prediccion )  #seleccionar gráficas  1, 2, 3 o 4
+  
+  prediccion
+  retornos[1249:1258]
+  
+  #comparación coeficientes
+  model.fit@fit$matcoef
+  coef(MA2)
+  coef(garch11)
